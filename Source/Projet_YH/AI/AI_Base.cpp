@@ -48,7 +48,7 @@ UBehaviorTree* AAI_Base::getbt()
 
 void AAI_Base::IsSeenByPlayer(bool on)
 {
-	if (!on)
+	if (on)
 		GetCharacterMovement()->DisableMovement();
 
 	else
