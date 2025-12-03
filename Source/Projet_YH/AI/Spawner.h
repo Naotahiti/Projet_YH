@@ -44,6 +44,7 @@ public:
 
 	FTimerHandle Handle;
 
+	UPROPERTY(EditAnywhere, Category = "Statistics")
 	TSubclassOf<AAI_Base> AI;
 
 	bool IsLocationInView(FVector Location, APlayerController* PlayerC);

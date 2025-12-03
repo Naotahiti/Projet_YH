@@ -19,7 +19,7 @@ void ASpawner::BeginPlay()
 	Super::BeginPlay();
 
 	
-	
+    SpawnEnemy();
 }
 
 // Called every frame

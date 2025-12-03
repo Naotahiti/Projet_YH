@@ -22,5 +22,7 @@ public :
 	//UBehaviorTree* tree;
 
 	virtual void OnPossess(APawn* pawn)override;
+
+	
 	
 };

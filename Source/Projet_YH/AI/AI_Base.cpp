@@ -2,6 +2,11 @@
 
 
 #include "../AI/AI_Base.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 AAI_Base::AAI_Base()
@@ -15,6 +20,8 @@ AAI_Base::AAI_Base()
 void AAI_Base::BeginPlay()
 {
 	Super::BeginPlay();
+
+	
 	
 }
 
@@ -23,6 +30,8 @@ void AAI_Base::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	distance = UKismetMathLibrary::Vector_Distance(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)->GetActorLocation(), GetActorLocation());
+	
 }
 
 // Called to bind functionality to input
@@ -35,5 +44,14 @@ void AAI_Base::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 UBehaviorTree* AAI_Base::getbt()
 {
 	return tree;
+}
+
+void AAI_Base::IsSeenByPlayer(bool on)
+{
+	if (!on)
+		GetCharacterMovement()->DisableMovement();
+
+	else
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 }
 

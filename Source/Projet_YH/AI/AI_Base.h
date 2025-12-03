@@ -6,6 +6,21 @@
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AI_Base.generated.h"
+ 
+class UBehaviorTree;
+
+// for animation blueprint
+UENUM(BlueprintType)
+enum class EAIState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+	Patrol UMETA(DisplayName = "Walk"),
+	Chase UMETA(DisplayName = "Shoot"),
+	Attack UMETA(DisplayName = "Melee"),
+	Flee UMETA(DisplayName = "Flee"),
+	GetDamage UMETA(DisplayName = "Damaged"),
+	Death UMETA(DisplayName = "Death")
+};
 
 UCLASS()
 class PROJET_YH_API AAI_Base : public ACharacter
@@ -39,13 +54,20 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Statistics")
 	float Range;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	EAIState CurrentState;
+
 	UPROPERTY(EditAnywhere, Category = "Behavior tree")
 	UBehaviorTree* tree;
 
 	UBehaviorTree* getbt();
 
+	UBlackboardComponent* blackboard;
 
+	// activate / deactivate AI's movement
+	void IsSeenByPlayer(bool on);
 
+	double distance; // to player
 
 	
 
