@@ -3,6 +3,9 @@
 
 #include "../AI/Spawner.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "../AI/AI_Base.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "../Projet_YHCharacter.h"
 
 // Sets default values
@@ -19,7 +22,7 @@ void ASpawner::BeginPlay()
 	Super::BeginPlay();
 
 	
-    SpawnEnemy();
+	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,1.,true,-1.);
 }
 
 // Called every frame
@@ -31,48 +34,61 @@ void ASpawner::Tick(float DeltaTime)
 
 void ASpawner::SpawnEnemy()
 {
-    APlayerController* PC = GetWorld()->GetFirstPlayerController();
-    FVector SpawnLocation;
-    int MaxAttempts = 50;
+	//GEngine->AddOnScreenDebugMessage(1, 10., FColor::Cyan, "ffffffrrr", true);
+	FVector2D Size = UWidgetLayoutLibrary::GetViewportSize(GetWorld());
 
-    for (int i = 0; i < MaxAttempts; i++)
-    {
-        // Génère une position aléatoire autour du joueur
-        float Distance = FMath::RandRange(1000.f, 2000.f);
-        float Angle = FMath::RandRange(0.f, 360.f);
+	float rdX = FMath::FRandRange(0.,Size.X);
+	float rdY = FMath::FRandRange(0.,Size.Y);
 
-        ACharacter* player = Cast<AProjet_YHCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-        SpawnLocation = player->GetActorLocation() + FVector(
-            FMath::Cos(FMath::DegreesToRadians(Angle)) * Distance,
-            FMath::Sin(FMath::DegreesToRadians(Angle)) * Distance,
-            0.f
-        );
+	FVector WorldLocation;
+	FVector WorldDirection;
 
-        // Vérifie si hors du champ de vision
-        if (!IsLocationInView(SpawnLocation, PC))
-        {
-            GetWorld()->SpawnActor<AAI_Base>(AI, SpawnLocation, FRotator::ZeroRotator);
-            break;
-        }
-    }
+	bool o = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), Size,WorldLocation,	
+		WorldDirection);
+
+	FVector dir = WorldLocation + WorldDirection * 2000.;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	FHitResult hit;
+	bool bhit = GetWorld()->LineTraceSingleByChannel(hit, WorldLocation, dir , ECC_Visibility , Params);
+	
+	
+
+	if (bhit)
+	{
+		FVector spawnloc = hit.Location;
+		UWorld* World = GetWorld();
+		if (!World) return;
+
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), WorldLocation,spawnloc,FColor::Red , 10. , 5. );
+
+		FActorSpawnParameters Paramsp;
+		Paramsp.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		FVector Location(0.f, 0.f, 100.f);
+		FRotator Rotation = FRotator::ZeroRotator;
+
+		
+
+		AAI_Base* Enemy = World->SpawnActor<AAI_Base>(
+			AIclass,
+			spawnloc,
+			Rotation,
+			Paramsp
+		);
+	}
 }
 
-bool ASpawner::IsLocationInView(FVector Location, APlayerController* PlayerC)
+void ASpawner::upLOD()
 {
-    if (!PlayerC) return false;
+}
 
-    FVector CameraLocation;
-    FRotator CameraRotation;
-    PlayerC->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-    
-    FVector ViewDir = CameraRotation.Vector();
-    FVector ToLocation = (Location - CameraLocation).GetSafeNormal();
-
-    float DotProduct = FVector::DotProduct(ViewDir, ToLocation);
-
-    // Si le dot product est négatif, c'est derrière la caméra
-    return DotProduct > 0.1f; // Ajustez selon vos besoins
+void ASpawner::downLOD()
+{
 }
 
 

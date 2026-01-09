@@ -8,6 +8,13 @@
 #include "Engine/TimerHandle.h"
 #include "Spawner.generated.h"
 
+
+//USTRUCT AIdata
+//
+//{
+//
+//}
+
 UCLASS()
 class PROJET_YH_API ASpawner : public AActor
 {
@@ -40,15 +47,21 @@ public:
 	void SpawnEnemy();
 
 	UPROPERTY(EditAnywhere ,Category = "Statistics")
-	int MaxEnemiesAlloWedPerType; // control the amount of enemies allowed accroding to their type 
+	int MaxEnemiesAllowedPerType; // control the amount of enemies allowed accroding to their type 
 
 	FTimerHandle Handle;
 
 	UPROPERTY(EditAnywhere, Category = "Statistics")
-	TSubclassOf<AAI_Base> AI;
+	TSubclassOf<AAI_Base> AIclass;
 
-	bool IsLocationInView(FVector Location, APlayerController* PlayerC);
+	TArray<TSubclassOf<AAI_Base>> CurrentAIs; // store all enemies 
 
-	FVector GetRandomPointOutsideFOV(const APlayerController* PC, float Radius, float FOVDegrees);
+	FTimerHandle spawnhandle;
+
+	UInstancedStaticMeshComponent* ism; // AIs are ism or charcters depending on the distance from the player , for better perf'
+	
+	void upLOD(); // promote AI to higher LOD = AI gets more complex
+
+	void downLOD(); // retrograde AI to lower LOD = AI gets less complex
 
 };
