@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "AIController.h"
 #include "AI_Base.generated.h"
  
 class UBehaviorTree;
@@ -60,6 +61,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Behavior tree")
 	UBehaviorTree* tree;
 
+	UFUNCTION(BlueprintCallable)
 	UBehaviorTree* getbt();
 
 	UBlackboardComponent* blackboard;
@@ -69,6 +71,6 @@ public:
 
 	double distance; // to player
 
-	
+	AAIController* AIC;
 
 };
