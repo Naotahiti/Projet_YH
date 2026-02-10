@@ -21,7 +21,7 @@ void ASpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
+	if(spawnoutofscreen)
 	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,1.,true,-1.);
 }
 
@@ -40,10 +40,12 @@ void ASpawner::SpawnEnemy()
 	float rdX = FMath::FRandRange(0.,Size.X);
 	float rdY = FMath::FRandRange(0.,Size.Y);
 
+	FVector2D rdtop = FVector2D(rdX,0);
+
 	FVector WorldLocation;
 	FVector WorldDirection;
 
-	bool o = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), Size,WorldLocation,	
+	bool o = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), rdtop,WorldLocation,	
 		WorldDirection);
 
 	FVector dir = WorldLocation + WorldDirection * 2000.;
@@ -62,7 +64,7 @@ void ASpawner::SpawnEnemy()
 		UWorld* World = GetWorld();
 		if (!World) return;
 
-		UKismetSystemLibrary::DrawDebugLine(GetWorld(), WorldLocation,spawnloc,FColor::Red , 10. , 5. );
+		//UKismetSystemLibrary::DrawDebugLine(GetWorld(), WorldLocation,spawnloc,FColor::Red , 10. , 5. );
 
 		FActorSpawnParameters Paramsp;
 		Paramsp.SpawnCollisionHandlingOverride =

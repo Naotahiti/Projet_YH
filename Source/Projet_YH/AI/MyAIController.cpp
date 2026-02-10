@@ -10,4 +10,5 @@ void AMyAIController::OnPossess(APawn* pawn)
 
 	AAI_Base* ai = Cast<AAI_Base>(pawn);
 	RunBehaviorTree(ai->getbt());
+	
 }

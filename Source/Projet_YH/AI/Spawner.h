@@ -46,6 +46,9 @@ public:
 
 	void SpawnEnemy();
 
+	UPROPERTY(EditAnywhere, Category = "spawnparameters")
+	bool spawnoutofscreen = true;
+
 	UPROPERTY(EditAnywhere ,Category = "Statistics")
 	int MaxEnemiesAllowedPerType; // control the amount of enemies allowed accroding to their type 
 
