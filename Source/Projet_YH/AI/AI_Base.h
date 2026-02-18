@@ -6,11 +6,12 @@
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
-#include "FlowField.h"
+//#include "FlowField.h"
 #include "AI_Base.generated.h"
  
 class UBehaviorTree;
 class UBrainComponent;
+class AFlowField;
 
 // for animation blueprint
 UENUM(BlueprintType)
@@ -58,7 +59,7 @@ public:
 	float Range;
 
 	UPROPERTY(EditAnywhere, Category = "Statistics")
-	float Speed;
+	float Speed = 200.;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	EAIState CurrentState;
@@ -74,6 +75,8 @@ public:
 
 	UBlackboardComponent* blackboard;
 
+	ACharacter* player;
+
 	// activate / deactivate AI's movement
 	void IsSeenByPlayer(bool on);
 
@@ -81,7 +84,7 @@ public:
 
 	AAIController* AIC;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FlowField")
+
 	AFlowField* Field;
 
 };

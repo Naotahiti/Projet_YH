@@ -9,6 +9,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BrainComponent.h"
+#include "FlowField.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
@@ -16,7 +17,7 @@ AAI_Base::AAI_Base()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 0.1f;
+	//PrimaryActorTick.TickInterval = 0.1f;
 
 	//AIControllerClass = AMyAIController::StaticClass();
 	//AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -29,6 +30,8 @@ void AAI_Base::BeginPlay()
 	Super::BeginPlay();
 
 	AIC = Cast<AMyAIController>(GetController());
+
+	player = UGameplayStatics::GetPlayerCharacter(GetWorld(),0);
 
 	if (AIC)
 	{
@@ -68,18 +71,11 @@ void AAI_Base::Tick(float DeltaTime)
 
 	
 	Dir = Field->SampleFlow(GetActorLocation());
-	FVector Velocity = FMath::VInterpTo(
-		Velocity,
-		Dir * Speed,
-		DeltaTime,
-		10.
-	);
-
-	//AddActorWorldOffset(Velocity * DeltaTime, true);
-	//AddMovementInput(Dir, Speed);
-	//GetCharacterMovement()->AddInputVector(Dir);
-	//AddActorWorldOffset(Dir * Speed * DeltaTime, true);
-	GEngine->AddOnScreenDebugMessage(-1, 10., FColor::Cyan, Dir.ToString());
+	FVector ToPlayer = player->GetActorLocation() - GetActorLocation();
+	SetActorRotation(Dir.Rotation());
+	
+	AddActorWorldOffset(Dir*Speed*DeltaTime );
+	
 	
 }
 

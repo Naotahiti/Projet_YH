@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Containers/Queue.h"
+#include "AI_Base.h"
 
 // Sets default values
 AFlowField::AFlowField()
@@ -33,7 +34,7 @@ void AFlowField::Tick(float DeltaTime)
     if (!PlayerPawn) return;
 
     
-    if (FVector::Dist(PlayerPawn->GetActorLocation(), LastPlayerPos) > 200.f)
+    if (FVector::Dist(PlayerPawn->GetActorLocation(), LastPlayerPos) > 200.f) // recalculate only if player moved enough
     {
         GenerateFlowField();
         LastPlayerPos = PlayerPawn->GetActorLocation();
@@ -82,7 +83,7 @@ void AFlowField::FloodFill()
     Queue.Enqueue(FIntPoint(TargetX, TargetY));
 
     const TArray<FIntPoint> Neighbors = {
-        {1,0},{-1,0},{0,1},{0,-1}
+        {1,0},{-1,0},{0,1},{0,-1}, { 1, 1}, { 1,-1}, {-1, 1}, {-1,-1}
     };
 
     while (!Queue.IsEmpty())
@@ -93,6 +94,7 @@ void AFlowField::FloodFill()
         int32 Index = GetCellIndex(Cell.X, Cell.Y);
         float CellCost = Cells[Index].Cost;
 
+  
         for (const FIntPoint& N : Neighbors)
         {
             int32 NX = Cell.X + N.X;
@@ -105,7 +107,25 @@ void AFlowField::FloodFill()
             if (Cells[NIndex].bBlocked)
                 continue;
 
-            float NewCost = CellCost + CellSize;
+           
+            bool bDiagonal = (N.X != 0 && N.Y != 0);
+
+           
+            if (bDiagonal)
+            {
+                int32 AdjIndex1 = GetCellIndex(Cell.X + N.X, Cell.Y);
+                int32 AdjIndex2 = GetCellIndex(Cell.X, Cell.Y + N.Y);
+
+                if (Cells[AdjIndex1].bBlocked || Cells[AdjIndex2].bBlocked)
+                    continue;
+            }
+
+            // ---- cost calculation ----
+            float MoveCost = bDiagonal
+                ? CellSize * 1.41421356f
+                : CellSize;
+
+            float NewCost = CellCost + MoveCost;
 
             if (NewCost < Cells[NIndex].Cost)
             {
@@ -113,11 +133,13 @@ void AFlowField::FloodFill()
 
                 FVector From = GetCellCenter(NX, NY);
                 FVector To = GetCellCenter(Cell.X, Cell.Y);
+
                 Cells[NIndex].Direction = (To - From).GetSafeNormal();
 
                 Queue.Enqueue(FIntPoint(NX, NY));
             }
         }
+
     }
 }
 
@@ -147,27 +169,29 @@ bool AFlowField::IsCellBlocked(int32 X, int32 Y) const
     FVector Center = GetCellCenter(X, Y);
 
     FHitResult Hit;
-    FVector Start = Center + FVector(0, 0, 50.f);
-    FVector End = Center + FVector(0, 0, 300.f);
-
-    FCollisionQueryParams Params;
-    Params.bReturnPhysicalMaterial = false;
-    Params.AddIgnoredActor(this);
-
-    bool bHit = GetWorld()->LineTraceSingleByChannel(
-        Hit,
-        Start,
-        End,
-        ECC_WorldStatic,
-        Params
+    FVector Start = Center + FVector(0, 0, 150.f);
+    FVector End = Center + FVector(0, 0, 50.f);
+   
+    TArray<AActor*> actorstoignore;
+    UGameplayStatics::GetAllActorsOfClass(
+        GetWorld(),
+        AAI_Base::StaticClass(),
+        actorstoignore
     );
+    actorstoignore.Add(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    
+   
+    bool bHit = UKismetSystemLibrary::LineTraceSingle(GetWorld(), Start, End, UEngineTypes::ConvertToTraceType(ECC_WorldStatic),
+        false, actorstoignore,
+        EDrawDebugTrace::None, Hit,true, FColor::Red, FColor::Green, 10.);
 
-    if (bHit && Hit.GetActor())
-    {
-        return Hit.GetActor()->ActorHasTag("Obstacle");
-    }
+    //DrawDebugLine(GetWorld(), Start, End, FColor::Red,false, 10.);
+    //if (bHit )//&& Hit.GetActor())
+    //{
+    //    return Hit.GetActor()->ActorHasTag("Obstacle");
+    //}
 
-    return false;
+    return bHit;
 }
 
 int32 AFlowField::GetCellIndex(int32 X, int32 Y) const
