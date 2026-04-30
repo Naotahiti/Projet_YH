@@ -22,7 +22,7 @@ void ASpawner::BeginPlay()
 	Super::BeginPlay();
 
 	if(spawnoutofscreen)
-	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,1.,true,-1.);
+	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,SpawnRate,true,-1.);
 }
 
 // Called every frame
@@ -81,6 +81,9 @@ void ASpawner::SpawnEnemy()
 			Rotation,
 			Paramsp
 		);
+		CurrentAIs.Add(Enemy->GetClass());
+		if (CurrentAIs.Num() == NumToSpawn)
+			GetWorldTimerManager().ClearTimer(spawnhandle);
 	}
 }
 

@@ -52,6 +52,8 @@ public:
     FVector GetCellCenter(int32 X, int32 Y) const;
     bool IsCellBlocked(int32 X, int32 Y) const;
 
+    TArray<AActor*> actorstoignore;
+
 protected:
  
     UPROPERTY(EditAnywhere, Category = "Flow Field")
@@ -62,6 +64,9 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Flow Field")
     float CellSize = 100.f;
+
+    UPROPERTY(EditAnywhere, Category = "Flow Field")
+    float DistanceMinForRecalculation = 200.f;
 
     UPROPERTY()
     TArray<FFlowCell> Cells;
