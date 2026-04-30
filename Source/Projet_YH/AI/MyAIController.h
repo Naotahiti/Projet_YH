@@ -23,6 +23,6 @@ public :
 
 	virtual void OnPossess(APawn* pawn)override;
 
-	
+	float test;
 	
 };

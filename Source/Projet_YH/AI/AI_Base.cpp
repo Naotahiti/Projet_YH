@@ -9,6 +9,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BrainComponent.h"
+#include "FlowField.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
@@ -16,9 +17,10 @@ AAI_Base::AAI_Base()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	//PrimaryActorTick.TickInterval = 0.1f;
 
-	AIControllerClass = AMyAIController::StaticClass();
-	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	//AIControllerClass = AMyAIController::StaticClass();
+	//AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 }
 
@@ -29,11 +31,25 @@ void AAI_Base::BeginPlay()
 
 	AIC = Cast<AMyAIController>(GetController());
 
+	player = UGameplayStatics::GetPlayerCharacter(GetWorld(),0);
+
 	if (AIC)
 	{
 		blackboard = AIC->GetBlackboardComponent();
+		
 	}
-	
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		AFlowField::StaticClass(),
+		Found
+	);
+
+	if (Found.Num() > 0)
+	{
+		Field = Cast<AFlowField>(Found[0]);
+	}
+
 }
 
 // Called every frame
@@ -44,22 +60,23 @@ void AAI_Base::Tick(float DeltaTime)
 	distance = UKismetMathLibrary::Vector_Distance(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)->GetActorLocation(), GetActorLocation());
 	
 	//AController* c = GetController(); // AI is possessed or unpossessed according to the distance to avoid perf' issues
-	if(AIC)
+	if (AIC)
+		blackboard->SetValueAsFloat("distance", distance);
+	if (!Field)
+
 	{
-		if (distance < 1000.f)
-		{
-		
-			AIC->BrainComponent->Activate();
-		
-		}
-		else
-		{
-
-
-			AIC->BrainComponent->Deactivate();
-
-		}
+		GEngine->AddOnScreenDebugMessage(-1, 0.1, FColor::Green, "no field found");
+			return;
 	}
+
+	
+	Dir = Field->SampleFlow(GetActorLocation());
+	FVector ToPlayer = player->GetActorLocation() - GetActorLocation();
+	SetActorRotation(Dir.Rotation());
+	
+	AddActorWorldOffset(Dir*Speed*DeltaTime );
+	
+	
 }
 
 // Called to bind functionality to input
