@@ -32,8 +32,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere ,Category = "Enemies to spawn")
-	TArray<TSubclassOf<AAI_Base>> Enemies;
+	/*UPROPERTY(EditAnywhere ,Category = "Enemies to spawn")
+	TArray<TSubclassOf<AAI_Base>> Enemies;*/
 
 	UPROPERTY(EditAnywhere, Category = "Statistics") // rate per second
 	float SpawnRate = 1.;
@@ -54,10 +54,10 @@ public:
 
 	FTimerHandle Handle;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics")
-	TSubclassOf<AAI_Base> AIclass;
+	//UPROPERTY(EditAnywhere, Category = "Statistics")
+	//TSubclassOf<AAI_Base> AIclass;
 
-	TArray<TSubclassOf<AAI_Base>> CurrentAIs; // store all enemies 
+	//TArray<TSubclassOf<AAI_Base>> CurrentAIs; // store all enemies 
 
 	FTimerHandle spawnhandle;
 
