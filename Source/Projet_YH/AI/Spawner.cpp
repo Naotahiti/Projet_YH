@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "../AI/AI_Base.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "../Projet_YHCharacter.h"
 
@@ -13,6 +14,7 @@ ASpawner::ASpawner()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	ism = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ism"));
 
 }
 
@@ -73,17 +75,13 @@ void ASpawner::SpawnEnemy()
 		FVector Location(0.f, 0.f, 100.f);
 		FRotator Rotation = FRotator::ZeroRotator;
 
-		
+		FTransform tr;
+		AI_Base* NewAI = new AI_Base(spawnloc + Location, FVector(0.,0.,0.));
+		AllAIs.Add(NewAI);
+		tr.SetLocation(spawnloc + Location);
+		ism->AddInstance(tr);
 
-		AAI_Base* Enemy = World->SpawnActor<AAI_Base>(
-			AIclass,
-			spawnloc,
-			Rotation,
-			Paramsp
-		);
-		CurrentAIs.Add(Enemy->GetClass());
-		if (CurrentAIs.Num() == NumToSpawn)
-			GetWorldTimerManager().ClearTimer(spawnhandle);
+		
 	}
 }
 

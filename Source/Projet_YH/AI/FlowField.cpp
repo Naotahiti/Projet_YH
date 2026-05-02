@@ -6,7 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Containers/Queue.h"
-#include "AI_Base.h"
+#include "../AI/AI_Base.h"
 
 // Sets default values
 AFlowField::AFlowField()
@@ -21,13 +21,7 @@ void AFlowField::BeginPlay()
     PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     if (!PlayerPawn) return;
 
-    UGameplayStatics::GetAllActorsOfClass(
-        GetWorld(),
-        AAI_Base::StaticClass(),
-        actorstoignore
-    );
-    actorstoignore.Add(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
+   
     Cells.SetNum(GridSizeX * GridSizeY);
 
     LastPlayerPos = PlayerPawn->GetActorLocation();

@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Projet_YH/Projet_YHCharacter.h"
-//#include "AI_Base.h"
+#include "../AI/AI_Base.h"
 #include "FlowField.generated.h"
 
-class AAI_Base;
+
 
 USTRUCT(BlueprintType)
 struct PROJET_YH_API FFlowCell
@@ -72,7 +72,7 @@ protected:
     TArray<FFlowCell> Cells;
 
 
-    AAI_Base* ai;
+    AI_Base* ai;
 
     APawn* PlayerPawn;
 

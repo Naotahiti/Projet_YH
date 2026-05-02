@@ -49,15 +49,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "spawnparameters")
 	bool spawnoutofscreen = true;
 
-	UPROPERTY(EditAnywhere ,Category = "Statistics")
-	int MaxEnemiesAllowedPerType; // control the amount of enemies allowed accroding to their type 
 
 	FTimerHandle Handle;
 
 	//UPROPERTY(EditAnywhere, Category = "Statistics")
 	//TSubclassOf<AAI_Base> AIclass;
 
-	//TArray<TSubclassOf<AAI_Base>> CurrentAIs; // store all enemies 
+	TArray<AI_Base*> AllAIs; // store all enemies 
 
 	FTimerHandle spawnhandle;
 
