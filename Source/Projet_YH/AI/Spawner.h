@@ -44,6 +44,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Statistics")
 	int MaxEnemiesAllowed;
 
+	UFUNCTION(BlueprintCallable)
 	void SpawnEnemy();
 
 	UPROPERTY(EditAnywhere, Category = "spawnparameters")
@@ -59,6 +60,7 @@ public:
 
 	FTimerHandle spawnhandle;
 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Statistics")
 	UInstancedStaticMeshComponent* ism; // AIs are ism or charcters depending on the distance from the player , for better perf'
 	
 	void upLOD(); // promote AI to higher LOD = AI gets more complex

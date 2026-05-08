@@ -5,6 +5,7 @@ public:
 
     FVector Position;
     FVector Velocity;
+    int chunkID;
 
 
 
