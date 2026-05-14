@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "../AI/AI_Base.h"
+#include "../AI/FlowField.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "../Projet_YHCharacter.h"
@@ -15,11 +16,11 @@ ASpawner::ASpawner()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	ism = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ism"));
-	for (int i = 0; i < NumToSpawn; i++)
+	/*for (int i = 0; i < NumToSpawn; i++)
 	{
 		SpawnEnemy();
 		
-	}
+	}*/
 	
 }
 
@@ -28,8 +29,14 @@ void ASpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(spawnoutofscreen)
+	//if(spawnoutofscreen)
 	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,SpawnRate,true,-1.);
+	GetWorldTimerManager().SetTimer(handledebug, this, &ASpawner::debugg, 3, true, -1.);
+}
+
+void ASpawner::debugg()
+{
+	GEngine->AddOnScreenDebugMessage(1, 1, FColor::Red, FString::FromInt(AllAIs.Num()), true);
 }
 
 // Called every frame
@@ -37,19 +44,43 @@ void ASpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (ff)
+		//GEngine->AddOnScreenDebugMessage(-1, 1., FColor::Cyan, "zezzzzzzzzzzzzz",true);
+	for (int i = 0; i < AllAIs.Num(); i++)
+	{
+		//FVector dir = ff->SampleFlow(AllAIs[i]->Position);
+		updateAI(i , DeltaTime);
+	}
+	ism->MarkRenderStateDirty();
 }
 void ASpawner::SpawnEnemy()
 {
 	int rdx = FMath::RandRange(-1000, 1000);
 	int rdy = FMath::RandRange(-1000, 1000);
-	FVector rdl = GetActorLocation() + FVector(rdx, rdy, 0.);
+	FVector rdl = GetActorLocation() + FVector(rdx, rdy, GetActorLocation().Z);
 
 	AI_Base* NewAI = new AI_Base(rdl, FVector(0., 0., 0.));
 			AllAIs.Add(NewAI);
+			NewAI->Position = rdl;
 			FTransform tr;
 			tr.SetLocation(rdl);
+			tr.SetScale3D(scaleAI);
 			ism->AddInstance(tr);
 			ism->MarkRenderStateDirty();
+			
+			//GEngine->AddOnScreenDebugMessage(1, 1, FColor::Red, FString::FromInt(AllAIs.Num()), true);
+}
+
+void ASpawner::updateAI(int index , float d)
+{
+	FVector dir = ff->SampleFlow(AllAIs[index]->Position);
+	AllAIs[index]->Position += dir * d * 100.;
+	FTransform t;
+	t.SetLocation(AllAIs[index]->Position);
+	t.SetScale3D(scaleAI);
+	ism->UpdateInstanceTransform(index, t, false, false); // last false as true but low fps
+
+
 }
 
 //void ASpawner::SpawnEnemy()

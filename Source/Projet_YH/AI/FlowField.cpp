@@ -12,6 +12,7 @@
 AFlowField::AFlowField()
 {
     PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.TickInterval = 0.2f;
 }
 
 void AFlowField::BeginPlay()
@@ -53,6 +54,7 @@ void AFlowField::GenerateFlowField()
             Cells[Index].bBlocked = IsCellBlocked(X, Y);
             Cells[Index].Cost = TNumericLimits<float>::Max();
             Cells[Index].Direction = FVector::ZeroVector;
+           // DrawDebugPoint(GetWorld(),Cells[Index].)
         }
     }
 
@@ -169,26 +171,28 @@ FVector AFlowField::SampleFlow(const FVector& WorldPosition) const
 
 bool AFlowField::IsCellBlocked(int32 X, int32 Y) const
 {
-    //FVector Center = GetCellCenter(X, Y);
+    FVector Center = GetCellCenter(X, Y);
 
-    //FHitResult Hit;
-    //FVector Start = Center + FVector(0, 0, 150.f);
-    //FVector End = Center + FVector(0, 0, 50.f);
+    FHitResult Hit;
+    FVector Start = Center + FVector(0, 0, 150.f);
+    FVector End = Center + FVector(0, 0, 50.f);
    
+   /* TArray<AActor*> actorstoignore;
+    UGameplayStatics::GetAllActorsOfClass(
+        GetWorld(),
+        AAI_Base::StaticClass(),
+        actorstoignore
+    );
+    actorstoignore.Add(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    */
     //TArray<AActor*> actorstoignore;
-    //UGameplayStatics::GetAllActorsOfClass(
-    //    GetWorld(),
-    //    AAI_Base::StaticClass(),
-    //    actorstoignore
-    //);
     //actorstoignore.Add(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    //
    
     //bool bHit = UKismetSystemLibrary::LineTraceSingle(GetWorld(), Start, End, UEngineTypes::ConvertToTraceType(ECC_WorldStatic),
     //    false, actorstoignore,
     //    EDrawDebugTrace::None, Hit,true, FColor::Red, FColor::Green, 10.);
 
-    ////DrawDebugLine(GetWorld(), Start, End, FColor::Red,false, 10.);
+    //DrawDebugLine(GetWorld(), Start, End, FColor::Red,false, 10.);
     ////if (bHit )//&& Hit.GetActor())
     ////{
     ////    return Hit.GetActor()->ActorHasTag("Obstacle");

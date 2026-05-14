@@ -1,4 +1,12 @@
 #pragma once
+
+UENUM()
+enum class EAgentState : uint8
+{
+    Idle,
+    Move
+};
+
 class AI_Base
 {
 public:
@@ -6,6 +14,7 @@ public:
     FVector Position;
     FVector Velocity;
     int chunkID;
+    EAgentState State;
 
 
 

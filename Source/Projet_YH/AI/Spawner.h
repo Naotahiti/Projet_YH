@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "../AI/AI_Base.h"
+#include "../AI/FlowField.h"
 #include "Engine/TimerHandle.h"
 #include "Spawner.generated.h"
 
@@ -35,6 +36,9 @@ public:
 	/*UPROPERTY(EditAnywhere ,Category = "Enemies to spawn")
 	TArray<TSubclassOf<AAI_Base>> Enemies;*/
 
+	UPROPERTY(EditAnywhere, Category = "Statistics")
+	FVector scaleAI;
+
 	UPROPERTY(EditAnywhere, Category = "Statistics") // rate per second
 	float SpawnRate = 1.;
 
@@ -50,6 +54,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "spawnparameters")
 	bool spawnoutofscreen = true;
 
+	void updateAI(int index , float d);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AFlowField* ff;
+
+	FTimerHandle handledebug;
+
+	void debugg();
 
 	FTimerHandle Handle;
 
