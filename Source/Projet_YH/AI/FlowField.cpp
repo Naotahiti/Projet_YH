@@ -13,6 +13,8 @@ AFlowField::AFlowField()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.TickInterval = 0.2f;
+
+   
 }
 
 void AFlowField::BeginPlay()
@@ -27,6 +29,21 @@ void AFlowField::BeginPlay()
 
     LastPlayerPos = PlayerPawn->GetActorLocation();
     GenerateFlowField();
+}
+
+void AFlowField::OnConstruction(const FTransform& Transform)
+{
+
+    Cells.SetNum(GridSizeX * GridSizeY);
+    if(cell_center_visualizer)
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+           
+            DrawDebugPoint(GetWorld(), GetCellCenter(X, Y), 10., FColor::Red, false,10.);
+        }
+    }
 }
 
 void AFlowField::Tick(float DeltaTime)

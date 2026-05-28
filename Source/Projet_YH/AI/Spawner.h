@@ -10,11 +10,7 @@
 #include "Spawner.generated.h"
 
 
-//USTRUCT AIdata
-//
-//{
-//
-//}
+
 
 UCLASS()
 class PROJET_YH_API ASpawner : public AActor
@@ -29,14 +25,23 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void OnConstruction(
+		const FTransform& Transform
+	) override;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, Category = "Statistics AI")
+	bool spawnonconstruction = false;
+
 	/*UPROPERTY(EditAnywhere ,Category = "Enemies to spawn")
 	TArray<TSubclassOf<AAI_Base>> Enemies;*/
+	UPROPERTY(EditAnywhere, Category = "Statistics AI")
+	float speed = 200.;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics")
+	UPROPERTY(EditAnywhere, Category = "Statistics AI")
 	FVector scaleAI;
 
 	UPROPERTY(EditAnywhere, Category = "Statistics") // rate per second
@@ -54,6 +59,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "spawnparameters")
 	bool spawnoutofscreen = true;
 
+	UFUNCTION(BlueprintCallable)
 	void updateAI(int index , float d);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

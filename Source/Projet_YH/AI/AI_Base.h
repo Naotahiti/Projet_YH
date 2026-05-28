@@ -4,7 +4,8 @@ UENUM()
 enum class EAgentState : uint8
 {
     Idle,
-    Move
+    Move,
+    Attack
 };
 
 class AI_Base

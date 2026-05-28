@@ -15,12 +15,11 @@ ASpawner::ASpawner()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	//RootComponent =CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+
 	ism = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ism"));
-	/*for (int i = 0; i < NumToSpawn; i++)
-	{
-		SpawnEnemy();
-		
-	}*/
+	ism->SetupAttachment(RootComponent);
+
 	
 }
 
@@ -29,9 +28,25 @@ void ASpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
+	for (int i = 0; i < NumToSpawn; i++)
+	{
+		SpawnEnemy();
+
+	}
+
 	//if(spawnoutofscreen)
-	GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,SpawnRate,true,-1.);
+	//GetWorldTimerManager().SetTimer(spawnhandle,this,&ASpawner::SpawnEnemy,SpawnRate,true,-1.);
 	GetWorldTimerManager().SetTimer(handledebug, this, &ASpawner::debugg, 3, true, -1.);
+}
+
+void ASpawner::OnConstruction(const FTransform& Transform)
+{
+	if(spawnonconstruction)
+	for (int i = 0; i < NumToSpawn; i++)
+	{
+		SpawnEnemy();
+
+	}
 }
 
 void ASpawner::debugg()
@@ -57,7 +72,7 @@ void ASpawner::SpawnEnemy()
 {
 	int rdx = FMath::RandRange(-1000, 1000);
 	int rdy = FMath::RandRange(-1000, 1000);
-	FVector rdl = GetActorLocation() + FVector(rdx, rdy, GetActorLocation().Z);
+	FVector rdl = GetActorLocation()+FVector(rdx, rdy, 0.);
 
 	AI_Base* NewAI = new AI_Base(rdl, FVector(0., 0., 0.));
 			AllAIs.Add(NewAI);
@@ -65,20 +80,21 @@ void ASpawner::SpawnEnemy()
 			FTransform tr;
 			tr.SetLocation(rdl);
 			tr.SetScale3D(scaleAI);
-			ism->AddInstance(tr);
+			ism->AddInstance(tr,true);
 			ism->MarkRenderStateDirty();
-			
+			//ism->UpdateInstanceTransform(index, t, false, false);
 			//GEngine->AddOnScreenDebugMessage(1, 1, FColor::Red, FString::FromInt(AllAIs.Num()), true);
 }
 
 void ASpawner::updateAI(int index , float d)
 {
+	
 	FVector dir = ff->SampleFlow(AllAIs[index]->Position);
-	AllAIs[index]->Position += dir * d * 100.;
+	AllAIs[index]->Position += dir * d * speed;
 	FTransform t;
 	t.SetLocation(AllAIs[index]->Position);
 	t.SetScale3D(scaleAI);
-	ism->UpdateInstanceTransform(index, t, false, false); // last false as true but low fps
+	ism->UpdateInstanceTransform(index, t, true, false , false); // last false as true but low fps
 
 
 }
