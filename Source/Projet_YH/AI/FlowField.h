@@ -1,87 +1,97 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Projet_YH/Projet_YHCharacter.h"
-#include "../AI/AI_Base.h"
+#include <atomic>
 #include "FlowField.generated.h"
 
-
-
-USTRUCT(BlueprintType)
-struct PROJET_YH_API FFlowCell
+// ─────────────────────────────────────────────
+//  SoA : données séparées par champ pour minimiser
+//  la cache pressure lors du SampleFlow (lecture seule)
+// ─────────────────────────────────────────────
+struct FFlowFieldData
 {
-    GENERATED_BODY()
+    TArray<FVector> Directions; // hot  — lu à chaque SampleFlow()
+    TArray<float>   Costs;      // warm — lu/écrit pendant FloodFill
+    TArray<bool>    Blocked;    // cold — bakée une seule fois
 
-    UPROPERTY()
-    float Cost = TNumericLimits<float>::Max();
+    void Init(int32 Total)
+    {
+        Directions.SetNumZeroed(Total);
+        Costs.SetNum(Total);
+        Blocked.SetNumZeroed(Total);
+    }
 
-    UPROPERTY()
-    bool bBlocked = false;
-
-    UPROPERTY()
-    FVector Direction = FVector::ZeroVector;
+    void ResetForFlood(int32 Total)
+    {
+        for (int32 i = 0; i < Total; i++)
+        {
+            Costs[i] = TNumericLimits<float>::Max();
+            Directions[i] = FVector::ZeroVector;
+        }
+    }
 };
 
 UCLASS()
-class PROJET_YH_API AFlowField : public AActor
+class AFlowField : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+    GENERATED_BODY()
+
 public:
     AFlowField();
 
-protected:
-    virtual void BeginPlay() override;
+    // ── Paramètres exposés ──
+    UPROPERTY(EditAnywhere, Category = "Grid")   int32   GridSizeX = 50;
+    UPROPERTY(EditAnywhere, Category = "Grid")   int32   GridSizeY = 50;
+    UPROPERTY(EditAnywhere, Category = "Grid")   float   CellSize = 200.f;
+    UPROPERTY(EditAnywhere, Category = "Grid")   float   DistanceMinForRecalculation = 100.f;
+    UPROPERTY(EditAnywhere, Category = "Debug")  bool    cell_center_visualizer = false;
 
-    virtual void OnConstruction(
-        const FTransform& Transform
-    ) override;
-
-    UPROPERTY(EditAnywhere,Category = "custom debug")
-    bool cell_center_visualizer;
-
-public:
-    virtual void Tick(float DeltaTime) override;
-
-    
-    void GenerateFlowField();
-    void FloodFill();
-
+    // ── API publique (appelée depuis Spawner, thread-safe en lecture) ──
     FVector SampleFlow(const FVector& WorldPosition) const;
 
-   
-    int32 GetCellIndex(int32 X, int32 Y) const;
-    FVector GetCellCenter(int32 X, int32 Y) const;
+protected:
+    virtual void BeginPlay()  override;
+    virtual void Tick(float DeltaTime) override;
+    virtual void OnConstruction(const FTransform& Transform) override;
+
+private:
+    // ── Double buffer ──
+    //   Cells      → lu par les agents (Game Thread uniquement)
+    //   CellsBack  → écrit par le worker thread
+    FFlowFieldData Cells;
+    FFlowFieldData CellsBack;
+
+    // Obstacles bakés une fois (jamais recalculés sauf si l'env change)
+    TArray<bool> bBlockedBaked;
+
+    // ── Synchronisation ──
+    std::atomic<bool> bComputeInProgress{ false };
+    std::atomic<bool> bPendingSwap{ false };
+
+    // ── BFS réutilisable (zéro alloc par recalcul) ──
+    TArray<FIntPoint> BFSQueue;
+
+    // ── Etat ──
+    APawn* PlayerPawn = nullptr;
+    FVector LastPlayerPos;
+
+    // ── Méthodes internes ──
+    void BakeObstacles();                                        // appelée une fois au BeginPlay
     bool IsCellBlocked(int32 X, int32 Y) const;
 
-    TArray<AActor*> actorstoignore;
+    // Lance le calcul async — écrit dans CellsBack
+    void RequestFloodFillAsync(FVector TargetPos, FVector GridOrigin);
 
-protected:
- 
-    UPROPERTY(EditAnywhere, Category = "Flow Field")
-    int32 GridSizeX = 100;
+    // Exécuté sur le worker thread — ne touche PAS à Cells
+    void FloodFillAsync(FVector TargetPos, FVector GridOrigin);
 
-    UPROPERTY(EditAnywhere, Category = "Flow Field")
-    int32 GridSizeY = 100;
-
-    UPROPERTY(EditAnywhere, Category = "Flow Field")
-    float CellSize = 100.f;
-
-    UPROPERTY(EditAnywhere, Category = "Flow Field")
-    float DistanceMinForRecalculation = 200.f;
-
-    UPROPERTY()
-    TArray<FFlowCell> Cells;
-
-
-    AI_Base* ai;
-
-    APawn* PlayerPawn;
-
-    FVector LastPlayerPos;
+    // Helpers
+    FORCEINLINE int32   GetCellIndex(int32 X, int32 Y) const { return Y * GridSizeX + X; }
+    FORCEINLINE FVector GetCellCenter(int32 X, int32 Y) const
+    {
+        return GetActorLocation()
+            + FVector(X * CellSize + CellSize * 0.5f,
+                Y * CellSize + CellSize * 0.5f, 0.f);
+    }
 };
