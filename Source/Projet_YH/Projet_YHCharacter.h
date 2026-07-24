@@ -44,6 +44,13 @@ class AProjet_YHCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
+	UPROPERTY(EditAnywhere)
+	float radius = 500.;
+	
+
 public:
 	AProjet_YHCharacter();
 	
@@ -63,6 +70,8 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay();
+
+	void Attack();
 
 public:
 	/** Returns CameraBoom subobject **/

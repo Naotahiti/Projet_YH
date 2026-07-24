@@ -16,6 +16,7 @@ ASpawner::ASpawner()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	//RootComponent =CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
 	ISM = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ISM"));
@@ -33,8 +34,9 @@ void ASpawner::BeginPlay()
 	
 	Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 
+	AI.Scale = Scale;
 	AI.Reserve(NumToSpawn);
-	Batch.SetNum(NumToSpawn);
+	//Batch.SetNum(NumToSpawn);
 	AI.SepRadiusSq = SeparationRadius;
 	AI.NeighborRadiusSq = NeighbourRadius;
 	AI.SepWeight = SeparationWeight;
@@ -53,8 +55,10 @@ void ASpawner::BeginPlay()
 	HC.SizeX = 50;
 	HC.SizeY = 50;
 	HC.Bake(GetWorld(), HC.Origin);
-	//Batch.SetNum(ISM->GetInstanceCount());
-	
+	Batch.SetNum(ISM->GetInstanceCount());
+	for (FTransform& T : Batch)
+		T.SetScale3D(Scale);
+	SetActorTickEnabled(true);
 	//GetWorldTimerManager().SetTimer(handledebug, this, &ASpawner::debugg, 3, true, -1.);
 }
 
@@ -78,14 +82,23 @@ void ASpawner::Tick(float DeltaTime)
 	FrameCounter++;
 	const FVector PlayerPos = Player->GetActorLocation();
 
+	
 	AI.RunLOD(PlayerPos);
-	AI.RunMovement(FF, Speed, DeltaTime);
-	//AI.RunBoids(DeltaTime , Speed);
+	
+	AI.RunMovement(FF, Speed, DeltaTime, [this](const FVector& Pos)
+		{
+			return HC.Sample(Pos);
+		});
 	AI.RunGravity(DeltaTime, [this](const FVector& Pos)
 		{return HC.Sample(Pos); });
-	AI.RunVAT(DeltaTime, FrameCounter, ISM);
+	
 	AI.RunRender(Batch, ISM);
+
+
 }
+
+
+
 void ASpawner::SpawnEnemy()
 {
 

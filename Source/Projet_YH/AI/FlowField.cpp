@@ -34,7 +34,7 @@ void AFlowField::BeginPlay()
     Swap(Cells, CellsBack);
 }
 
-// ─────────────────────────────────────────────
+// to see thje cells before running the project , 
 void AFlowField::OnConstruction(const FTransform& Transform)
 {
     if (!cell_center_visualizer) return;
@@ -44,15 +44,12 @@ void AFlowField::OnConstruction(const FTransform& Transform)
             DrawDebugPoint(GetWorld(), GetCellCenter(X, Y), 10.f, FColor::Red, false, 10.f);
 }
 
-// ─────────────────────────────────────────────
 void AFlowField::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     if (!PlayerPawn) return;
 
-    // ── Swap si le worker a terminé ──────────────────────────────────
-    // bPendingSwap est mis à true par le worker AVANT de passer bComputeInProgress à false,
-    // donc on est sûrs que CellsBack est entièrement écrit quand on arrive ici.
+    
     if (bPendingSwap.load(std::memory_order_acquire))
     {
         // Le swap se fait sur le Game Thread : aucune race possible car
@@ -61,7 +58,7 @@ void AFlowField::Tick(float DeltaTime)
         bPendingSwap.store(false, std::memory_order_release);
     }
 
-    // ── Lance un nouveau calcul si le joueur a bougé ──────────────────
+    // only recalculate when player has moved , for better performances due to lesser calculations
     const FVector CurrentPos = PlayerPawn->GetActorLocation();
     const bool    bMoved = FVector::DistSquared(CurrentPos, LastPlayerPos)
         > FMath::Square(DistanceMinForRecalculation);
@@ -73,18 +70,14 @@ void AFlowField::Tick(float DeltaTime)
     }
 }
 
-// ─────────────────────────────────────────────
-//  Lance le calcul sur un thread background
-// ─────────────────────────────────────────────
+
 void AFlowField::RequestFloodFillAsync(FVector TargetPos, FVector GridOrigin)
 {
 
-    // Marque le début du calcul
+   
     bComputeInProgress.store(true, std::memory_order_release);
 
-    // Copie de bBlockedBaked dans CellsBack.Blocked (la référence au tableau
-    // principal ne doit pas être lue depuis le worker sans garantie de vie)
-    // → déjà fait au BeginPlay et à chaque BakeObstacles(); on ne retouche pas Blocked ici.
+   
 
     AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
         [this, TargetPos, GridOrigin]()
@@ -97,10 +90,7 @@ void AFlowField::RequestFloodFillAsync(FVector TargetPos, FVector GridOrigin)
         });
 }
 
-// ─────────────────────────────────────────────
-//  BFS — s'exécute sur un worker thread
-//  N'accède JAMAIS à Cells, seulement CellsBack
-// ─────────────────────────────────────────────
+
 void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
 {
     static const FIntPoint kNeighbors[8] = {
@@ -110,11 +100,10 @@ void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
 
     const int32 Total = GridSizeX * GridSizeY;
 
-    // ── Reset du buffer back ──────────────────────────────────────────
-    // Blocked est déjà bon (bakée au BeginPlay, jamais modifiée)
+    
     CellsBack.ResetForFlood(Total);
 
-    // ── Cellule cible ─────────────────────────────────────────────────
+   
     const FVector Local = TargetPos - GridOrigin;
 
     const int32 TargetX = FMath::Clamp(
@@ -125,8 +114,8 @@ void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
     const int32 TargetIndex = GetCellIndex(TargetX, TargetY);
     CellsBack.Costs[TargetIndex] = 0.f;
 
-    // ── BFS avec TArray + curseur (zéro allocation) ───────────────────
-    BFSQueue.Reset(); // reset le Num() sans libérer la mémoire
+    
+    BFSQueue.Reset(); 
     BFSQueue.Add(FIntPoint(TargetX, TargetY));
     int32 Head = 0;
 
@@ -136,7 +125,7 @@ void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
         const int32 CellIdx = GetCellIndex(Cell.X, Cell.Y);
         const float CellCost = CellsBack.Costs[CellIdx];
 
-        // Centre de la cellule courante — calculé une fois pour les 8 voisins
+   
         const FVector CellCenter = GridOrigin
             + FVector(Cell.X * CellSize + CellSize * 0.5f,
                 Cell.Y * CellSize + CellSize * 0.5f, 0.f);
@@ -154,7 +143,7 @@ void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
 
             if (CellsBack.Blocked[NIdx]) continue;
 
-            // Coupe-coin : un diagonal ne passe pas si les deux cases adjacentes sont bloquées
+            // no diagonals if blocked
             const bool bDiagonal = (N.X != 0 && N.Y != 0);
             if (bDiagonal)
             {
@@ -171,23 +160,20 @@ void AFlowField::FloodFillAsync(FVector TargetPos, FVector GridOrigin)
             {
                 CellsBack.Costs[NIdx] = NewCost;
 
-                // Direction : du voisin vers la cellule courante (vers le joueur)
+                // Direction 
                 const FVector NeighborCenter = GridOrigin
                     + FVector(NX * CellSize + CellSize * 0.5f,
                         NY * CellSize + CellSize * 0.5f, 0.f);
 
                 CellsBack.Directions[NIdx] = (CellCenter - NeighborCenter).GetSafeNormal();
 
-                BFSQueue.Add(FIntPoint(NX, NY));
+                BFSQueue.Add(FIntPoint(NX, NY)); // maj du chemin vers le joueur
             }
         }
     }
 }
 
-// ─────────────────────────────────────────────
-//  SampleFlow — appelé depuis le Spawner (Game Thread)
-//  Lit uniquement Cells.Directions[] : hot path, SoA friendly
-// ─────────────────────────────────────────────
+//lecture de directions
 FVector AFlowField::SampleFlow(const FVector& WorldPosition) const
 {
     if (Cells.Directions.Num() == 0) return FVector::ZeroVector;
@@ -200,10 +186,7 @@ FVector AFlowField::SampleFlow(const FVector& WorldPosition) const
     return Cells.Directions[GetCellIndex(X, Y)];
 }
 
-// ─────────────────────────────────────────────
-//  BakeObstacles — appelé UNE seule fois au BeginPlay
-//  Les traces sont synchrones mais acceptables ici (chargement)
-// ─────────────────────────────────────────────
+// prise en compte des obstacles , au begin play  car statiques
 void AFlowField::BakeObstacles()
 {
     const int32 Total = GridSizeX * GridSizeY;
@@ -218,7 +201,7 @@ void AFlowField::BakeObstacles()
 bool AFlowField::IsCellBlocked(int32 X, int32 Y) const
 {
     const FVector Center = GetCellCenter(X, Y);
-    const FVector Start = Center + FVector(0.f, 0.f, 150.f);
+    const FVector Start = Center + FVector(0.f, 0.f, 5000.f);
     const FVector End = Center + FVector(0.f, 0.f, 50.f);
 
     FHitResult Hit;
@@ -227,8 +210,10 @@ bool AFlowField::IsCellBlocked(int32 X, int32 Y) const
 
     // Simple trace verticale pour détecter les obstacles au sol
     const bool bHit = GetWorld()->LineTraceSingleByChannel(
-        Hit, Start, End, ECC_WorldStatic, Params);
-
-    // Tu peux affiner ici : bHit && Hit.GetActor()->ActorHasTag("Obstacle")
-    return bHit;
+        Hit, Start, Center, ECC_WorldStatic, Params);
+    if (bHit)
+        return Hit.GetActor()->ActorHasTag("Obstacle");
+    else 
+        return false;
+    
 }

@@ -33,6 +33,8 @@ public:
 
         int32    Count = 0;
 
+        int32 SeqStart = 0;
+
         void InitAt(int32 i, const FVector& Pos, int32 InISMIndex,
             float InAnimStart, float InAnimEnd, float InAnimRate,
             float InHP = 100.f)
@@ -159,6 +161,7 @@ public:
 
     FSpatialGrid   Grid;
 
+    FVector Scale;
     float SepRadiusSq = 10000.f;
     float NeighborRadiusSq = 40000.f;
     float SepWeight = 1.5f; // separation weight
@@ -218,30 +221,41 @@ public:
             });
     }
 
-    void RunMovement(const AFlowField* FF, float Speed, float DeltaTime)
+    void RunMovement(const AFlowField* FF, float Speed, float DeltaTime, TFunctionRef<float(const FVector&)> SampleHeight)
     {
-
         if (!FF) return;
+
+        const int32 Total = TotalEntities();
+        if (Total == 0) return;
+
+        {
+            int32 Seq = 0;
+            for (int32 ci = 0; ci < Chunks.Num(); ci++)
+            {
+                Chunks[ci].SeqStart = Seq;
+                Seq += Chunks[ci].Count;
+            }
+        }
 
         Grid.Clear();
         for (int32 ci = 0; ci < Chunks.Num(); ci++)
             for (int32 i = 0; i < Chunks[ci].Count; i++)
-                Grid.Insert(ToGlobalIndex(ci, i), Chunks[ci].Positions[i]);
+                Grid.Insert(Chunks[ci].SeqStart + i, Chunks[ci].Positions[i]);
         Grid.Build();
 
         TArray<FVector> NewVelocities;
-        NewVelocities.SetNum(TotalEntities());
-
+        NewVelocities.SetNum(Total);
+        //lecture
         ParallelFor(Chunks.Num(), [&](int32 ci)
             {
                 FChunk& C = Chunks[ci];
                 for (int32 i = 0; i < C.Count; i++)
                 {
-                    const int32 GlobalIdx = ToGlobalIndex(ci, i);
+                    const int32 Seq = C.SeqStart + i;
 
                     if (C.LODLevel[i] == 2)
                     {
-                        NewVelocities[GlobalIdx] = FVector::ZeroVector;
+                        NewVelocities[Seq] = FVector::ZeroVector;
                         continue;
                     }
 
@@ -256,15 +270,18 @@ public:
                         int32   Count = 0;
 
                         const FVector MyPos = C.Positions[i];
-                        const int32 MyGlobal = GlobalIdx;
+                        const int32 MySeqIdx = Seq;
 
-                        Grid.ForEachNeighbor(MyPos, [&](int32 NeighborGlobal)
+                        Grid.ForEachNeighbor(MyPos, [&](int32 NSeqIdx)
                             {
-                                if (NeighborGlobal == MyGlobal) return;
-                                int32 nci, ni;
-                                FromGlobalIndex(NeighborGlobal, nci, ni);
+                                if (NSeqIdx == MySeqIdx) return;
+                                int32 nci = 0, ni = NSeqIdx;
+                                for (; nci < Chunks.Num(); nci++)
+                                {
+                                    if (ni < Chunks[nci].Count) break;
+                                    ni -= Chunks[nci].Count;
+                                }
                                 if (!Chunks.IsValidIndex(nci)) return;
-                                if (ni >= Chunks[nci].Count)   return;
 
                                 const FVector NPos = Chunks[nci].Positions[ni];
                                 const float DistSq = FVector::DistSquared(MyPos, NPos);
@@ -286,27 +303,31 @@ public:
                             Coh = ((Coh / Count) - MyPos).GetSafeNormal();
                         }
 
-                        const FVector Steering = Sep * SepWeight + Ali * AliWeight + Coh * CohWeight;
+                        const FVector Steering = Sep * SepWeight
+                            + Ali * AliWeight
+                            + Coh * CohWeight;
                         DesiredVel.X += Steering.X * Speed;
                         DesiredVel.Y += Steering.Y * Speed;
                     }
 
-                    // Limite vitesse
                     const float VelSq = DesiredVel.SizeSquared2D();
                     if (VelSq > Speed * Speed * 4.f)
                         DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 2.f;
 
-                    NewVelocities[GlobalIdx] = DesiredVel;
+                    NewVelocities[Seq] = DesiredVel;
                 }
             });
+
+        // application
         for (int32 ci = 0; ci < Chunks.Num(); ci++)
         {
             FChunk& C = Chunks[ci];
             for (int32 i = 0; i < C.Count; i++)
             {
-                const FVector& Vel = NewVelocities[ToGlobalIndex(ci, i)];
+                const FVector& Vel = NewVelocities[C.SeqStart + i];
                 C.Velocities[i] = Vel;
                 C.Positions[i] += Vel * DeltaTime;
+                C.Positions[i].Z = SampleHeight(C.Positions[i]) + 2.f;
 
                 const FVector Dir2D(Vel.X, Vel.Y, 0.f);
                 if (!Dir2D.IsNearlyZero())
@@ -327,7 +348,7 @@ public:
         for (FChunk& C : Chunks)
             for (int32 i = 0; i < C.Count; i++)
             {
-                if (C.LODLevel[i] != 0) continue;
+               // if (C.LODLevel[i] != 0) continue;
 
                 const float GroundZ = SampleHeight(C.Positions[i]);
 
@@ -348,40 +369,14 @@ public:
             }
     }
 
-    void RunVAT(float DeltaTime, int32 FrameCounter,
-        UInstancedStaticMeshComponent* ISM)
-    {
-        if (!ISM) return;
-
-        for (FChunk& C : Chunks)
-            for (int32 i = 0; i < C.Count; i++)
-            {
-                if (C.ISMIndex[i] < 0 || C.ISMIndex[i] >= ISM->GetInstanceCount())
-                    continue;
-
-                if (C.LODLevel[i] == 2) continue;                         // frozen : skip
-                if (C.LODLevel[i] == 1 && FrameCounter % 3 != 0) continue;
-
-                C.AnimTime[i] += DeltaTime * C.AnimRate[i];
-                if (C.AnimTime[i] > C.AnimEnd[i])
-                    C.AnimTime[i] = C.AnimStart[i];
-
-                const float Range = C.AnimEnd[i] - C.AnimStart[i];
-                const float T = Range > 0.f
-                    ? (C.AnimTime[i] - C.AnimStart[i]) / Range
-                    : 0.f;
-
-                ISM->SetCustomDataValue(C.ISMIndex[i], 0, T, false);
-            }
-
-        ISM->MarkRenderStateDirty();
-    }
+   
 
     //// avoid looping on UpdateInstanceTransform
     void RunRender(TArray<FTransform>& Batch, UInstancedStaticMeshComponent* ISM)
     {
         if (!ISM) return;
-
+        
+       
         ParallelFor(Chunks.Num(), [&](int32 ci)
             {
                 FChunk& C = Chunks[ci];
@@ -390,10 +385,81 @@ public:
                     if (!Batch.IsValidIndex(C.ISMIndex[i])) continue;
                     Batch[C.ISMIndex[i]].SetLocation(C.Positions[i]);
                     Batch[C.ISMIndex[i]].SetRotation(C.Rotations[i]);
-                    Batch[C.ISMIndex[i]].SetScale3D(FVector(0.2f));
+                    Batch[C.ISMIndex[i]].SetScale3D(FVector(Scale));
                 }
             });
 
         ISM->BatchUpdateInstancesTransforms(0, Batch, true, true, true);
     }
+
+    void RunDeath(UInstancedStaticMeshComponent* ISM)
+    {
+        if (!ISM) return;
+
+        TArray<int32> ToRemoveISM;
+        for (int32 ci = 0; ci < Chunks.Num(); ci++)
+            for (int32 i = 0; i < Chunks[ci].Count; i++)
+                if (Chunks[ci].HP[i] <= 0.f)
+                    ToRemoveISM.Add(Chunks[ci].ISMIndex[i]);
+
+        if (ToRemoveISM.Num() == 0) return;
+
+        ToRemoveISM.Sort([](int32 A, int32 B) { return A > B; });
+        for (int32 Idx : ToRemoveISM)
+            if (Idx >= 0 && Idx < ISM->GetInstanceCount())
+                ISM->RemoveInstance(Idx);
+
+        for (int32 ci = Chunks.Num() - 1; ci >= 0; ci--)
+            for (int32 i = Chunks[ci].Count - 1; i >= 0; i--)
+            {
+                if (Chunks[ci].HP[i] > 0.f) continue;
+
+                FChunk& C = Chunks[ci];
+                const int32 Last = C.Count - 1;
+
+                if (i != Last)
+                {
+                    C.Positions[i] = C.Positions[Last];
+                    C.Velocities[i] = C.Velocities[Last];
+                    C.Rotations[i] = C.Rotations[Last];
+                    C.FallVelocity[i] = C.FallVelocity[Last];
+                    C.OnGround[i] = C.OnGround[Last];
+                    C.GroundNormal[i] = C.GroundNormal[Last];
+                    C.HP[i] = C.HP[Last];
+                    C.AnimTime[i] = C.AnimTime[Last];
+                    C.AnimStart[i] = C.AnimStart[Last];
+                    C.AnimEnd[i] = C.AnimEnd[Last];
+                    C.AnimRate[i] = C.AnimRate[Last];
+                    C.ISMIndex[i] = C.ISMIndex[Last];
+                    C.LODLevel[i] = C.LODLevel[Last];
+                    C.DistSq[i] = C.DistSq[Last];
+                }
+                C.Count--;
+            }
+        for (int32 ci = Chunks.Num() - 1; ci >= 0; ci--)
+            if (Chunks[ci].Count == 0)
+                Chunks.RemoveAt(ci);
+
+        int32 GlobalIdx = 0;
+        for (FChunk& C : Chunks)
+            for (int32 i = 0; i < C.Count; i++)
+                C.ISMIndex[i] = GlobalIdx++;
+
+    }
+    
+
+    void DamageEntitiesInRadius(const FVector& HitPos, float Radius, float Damage)
+    {
+        const float RadiusSq = Radius * Radius;
+
+        for (FChunk& C : Chunks)
+            for (int32 i = 0; i < C.Count; i++)
+            {
+                if (FVector::DistSquared(C.Positions[i], HitPos) < RadiusSq)
+                    C.HP[i] -= Damage;
+            }
+    }
+
+   
+        
 };

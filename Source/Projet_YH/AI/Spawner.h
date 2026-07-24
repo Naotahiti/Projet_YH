@@ -55,12 +55,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Statistics")
 	int NumToSpawn;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics")
-	int MaxEnemiesAllowed;
-
-	UPROPERTY(EditAnywhere, Category = "Statistics")
-	float DistanceMin;
-
 	UPROPERTY(EditAnywhere, Category = "Boids forces")
 	float SeparationRadius = 200.;
 
@@ -75,14 +69,6 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Boids forces")
 	float CohesionWeight = 2.;
-
-	/*void UpdateAgentCollision(int index, float DeltaTime);
-
-	void AlignAgentToGround(int index , float d);*/
-
-	//TMap<FTraceHandle, int32> PendingTraces;
-
-	//void RequestGroundTraceAsync(int32 index);
 
 	int32 FrameCounter = 0;
 
@@ -178,17 +164,9 @@ public:
 	};
 
 	TArray<FPendingTrace*> ActiveDelegates;
-	//void OnGroundTraceComplete(const FTraceHandle& Handle, FTraceDatum& Data);
-	//void OnGroundTraceComplete_Internal(int32 AgentIndex, const FTraceHandle& Handle, FTraceDatum& Data);
 
 	UFUNCTION(BlueprintCallable)
 	void SpawnEnemy();
-
-	UPROPERTY(EditAnywhere, Category = "spawnparameters")
-	bool spawnoutofscreen = true;
-
-	/*UFUNCTION(BlueprintCallable)
-	void updateAI(int index , float d);*/
 
 	UPROPERTY(EditAnywhere)
 	AFlowField* FF = nullptr;
@@ -203,6 +181,19 @@ public:
 
 	FTimerHandle Handle;
 
+	void DamageInRadius(FVector HitPos, float Radius, float Damage)
+	{
+		AI.DamageEntitiesInRadius(HitPos, Radius, Damage);
+		AI.RunDeath(ISM);              
+		Batch.SetNum(ISM->GetInstanceCount());
+		
+	}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Horde") // pour HUD
+	int32 GetEnemyCount() const
+	{
+		return AI.TotalEntities();
+	}
 	
 	// if we want to use a timer to spawn
 	FTimerHandle spawnhandle;
