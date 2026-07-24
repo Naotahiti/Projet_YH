@@ -41,11 +41,11 @@ public:
     AFlowField();
 
     // ── Paramètres exposés ──
-    UPROPERTY(EditAnywhere, Category = "Grid")   int32   GridSizeX = 50;
-    UPROPERTY(EditAnywhere, Category = "Grid")   int32   GridSizeY = 50;
-    UPROPERTY(EditAnywhere, Category = "Grid")   float   CellSize = 200.f;
-    UPROPERTY(EditAnywhere, Category = "Grid")   float   DistanceMinForRecalculation = 100.f;
-    UPROPERTY(EditAnywhere, Category = "Debug")  bool    cell_center_visualizer = false;
+    UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid")   int32   GridSizeX = 50;
+    UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid")   int32   GridSizeY = 50;
+    UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid")   float   CellSize = 200.f;
+    UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid")   float   DistanceMinForRecalculation = 100.f;
+    UPROPERTY(EditAnywhere, Category = "My Custom variables | Debug")  bool    cell_center_visualizer = false;
 
     // ── API publique (appelée depuis Spawner, thread-safe en lecture) ──
     FVector SampleFlow(const FVector& WorldPosition) const;

@@ -37,37 +37,37 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics AI")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Statistics AI")
 	bool spawnonconstruction = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite ,Category = "Statistics AI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite ,Category = "My Custom variables | Statistics AI")
 	UAnimToTextureDataAsset* DA;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics AI")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Statistics AI")
 	float Speed = 200.;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics AI")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Statistics AI")
 	FVector Scale = FVector::OneVector; 
 
-	UPROPERTY(EditAnywhere, Category = "Statistics") // rate per second
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Statistics") // rate per second
 	float SpawnRate = 1.;
 
-	UPROPERTY(EditAnywhere, Category = "Statistics")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Statistics")
 	int NumToSpawn;
 
-	UPROPERTY(EditAnywhere, Category = "Boids forces")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Boids forces")
 	float SeparationRadius = 200.;
 
-	UPROPERTY(EditAnywhere, Category = "Boids forces")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Boids forces")
 	float NeighbourRadius = 1000.; 
 
-	UPROPERTY(EditAnywhere, Category = "Boids forces")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Boids forces")
 	float SeparationWeight = 2.; 
 
-	UPROPERTY(EditAnywhere, Category = "Boids forces")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Boids forces")
 	float AlignemntWeight = 2.;
 
-	UPROPERTY(EditAnywhere, Category = "Boids forces")
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Boids forces")
 	float CohesionWeight = 2.;
 
 	int32 FrameCounter = 0;
@@ -146,13 +146,13 @@ public:
 		//float Sample(const FVector& Pos) const;
 	};
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere , Category = "My Custom variables | Grid ")
 	int32 GridWidth = 200;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid ")
 	int32 GridHeight = 200;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "My Custom variables | Grid ")
 	float HeightCellSize = 100.f;
 
 	FHeightGrid HeightGrid;
@@ -198,8 +198,8 @@ public:
 	// if we want to use a timer to spawn
 	FTimerHandle spawnhandle;
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Statistics")
-	UInstancedStaticMeshComponent* ISM; // AIs are ism or charcters depending on the distance from the player , for better perf'
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = " My Custom Variables | Statistics")
+	UInstancedStaticMeshComponent* ISM; // AIs are ism for better perf'
 	
 	
 
