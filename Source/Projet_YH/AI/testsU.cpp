@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+#include "../AI/testsU.h"
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
 #include "../AI/AI_Base.h"
@@ -190,4 +190,4 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTestTotalApresMort,
     TestEqual("3 entités vivantes après 2 morts", Vivants, 3);
 
     return true;
-}
+};
