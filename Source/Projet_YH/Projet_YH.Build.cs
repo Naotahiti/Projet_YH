@@ -14,5 +14,11 @@ public class Projet_YH : ModuleRules
 {
     "AnimToTexture"
 });
+       
+            PrivateDependencyModuleNames.AddRange(new string[]
+            {
+                "AutomationController"
+            });
+        
     }
 }
