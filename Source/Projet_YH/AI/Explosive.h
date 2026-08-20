@@ -27,4 +27,7 @@ public:
 
 	FTimerHandle th;
 
+	UPROPERTY(EditAnywhere , Category = "My Custom Variables")
+	bool isproximitymine;
+
 };

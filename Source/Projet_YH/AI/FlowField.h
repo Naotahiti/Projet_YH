@@ -57,33 +57,33 @@ protected:
 
 private:
     // ── Double buffer ──
-    //   Cells      → lu par les agents (Game Thread uniquement)
-    //   CellsBack  → écrit par le worker thread
+    //   Cells lu par les agents (Game Thread uniquement)
+    //   CellsBack écrit par le worker thread
     FFlowFieldData Cells;
     FFlowFieldData CellsBack;
 
-    // Obstacles bakés une fois (jamais recalculés sauf si l'env change)
+    // Obstacles baked
     TArray<bool> bBlockedBaked;
 
-    // ── Synchronisation ──
+    // ── Synchronisation / opti
     std::atomic<bool> bComputeInProgress{ false };
     std::atomic<bool> bPendingSwap{ false };
 
     // ── BFS réutilisable (zéro alloc par recalcul) ──
     TArray<FIntPoint> BFSQueue;
 
-    // ── Etat ──
+    // 
     APawn* PlayerPawn = nullptr;
     FVector LastPlayerPos;
 
-    // ── Méthodes internes ──
-    void BakeObstacles();                                        // appelée une fois au BeginPlay
+    // functions for obstacle
+    void BakeObstacles();                                        
     bool IsCellBlocked(int32 X, int32 Y) const;
 
-    // Lance le calcul async — écrit dans CellsBack
+    
     void RequestFloodFillAsync(FVector TargetPos, FVector GridOrigin);
 
-    // Exécuté sur le worker thread — ne touche PAS à Cells
+    
     void FloodFillAsync(FVector TargetPos, FVector GridOrigin);
 
     // Helpers

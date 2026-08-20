@@ -208,9 +208,14 @@ bool AFlowField::IsCellBlocked(int32 X, int32 Y) const
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
 
-    // Simple trace verticale pour détecter les obstacles au sol
-    const bool bHit = GetWorld()->LineTraceSingleByChannel(
-        Hit, Start, Center, ECC_WorldStatic, Params);
+    const FVector HalfExtent(CellSize * 0.5f, CellSize * 0.5f, 10.f);
+
+    // sweep instead of line trace for better obstacle detection
+    const bool bHit = GetWorld()->SweepSingleByChannel(
+        Hit, Start, End, FQuat::Identity,
+        ECC_WorldStatic,
+        FCollisionShape::MakeBox(HalfExtent), Params);
+
     if (bHit)
         return Hit.GetActor()->ActorHasTag("Obstacle");
     else 
