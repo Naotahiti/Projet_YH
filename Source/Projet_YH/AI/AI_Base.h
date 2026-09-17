@@ -303,11 +303,15 @@ public:
                             Coh = ((Coh / Count) - MyPos).GetSafeNormal();
                         }
 
-                        const FVector Steering = Sep * SepWeight
+                      /*  const FVector Steering = Sep * SepWeight
                             + Ali * AliWeight
                             + Coh * CohWeight;
                         DesiredVel.X += Steering.X * Speed;
-                        DesiredVel.Y += Steering.Y * Speed;
+                        DesiredVel.Y += Steering.Y * Speed;*/
+                        const FVector Steering = Sep * SepWeight + Ali * AliWeight + Coh * CohWeight;
+                        const FVector FinalDir = (FlowDir.GetSafeNormal2D() + Steering).GetSafeNormal2D();
+                        DesiredVel.X = FinalDir.X * Speed;
+                        DesiredVel.Y = FinalDir.Y * Speed;
                     }
 
                     const float VelSq = DesiredVel.SizeSquared2D();
@@ -331,7 +335,14 @@ public:
 
                 const FVector Dir2D(Vel.X, Vel.Y, 0.f);
                 if (!Dir2D.IsNearlyZero())
-                    C.Rotations[i] = Dir2D.ToOrientationQuat();
+                    //C.Rotations[i] = Dir2D.ToOrientationQuat();
+                {
+                    FQuat BaseRot = Dir2D.ToOrientationQuat();
+                    FQuat Offset = FQuat(FVector::UpVector, FMath::DegreesToRadians(-90.f)); // fix décalage sur la gauche
+                    BaseRot = BaseRot * Offset;
+
+                    C.Rotations[i] = FQuat::Slerp(C.Rotations[i], BaseRot, DeltaTime * 10.f);
+                }
             }
         }
 
