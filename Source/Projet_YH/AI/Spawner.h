@@ -189,6 +189,8 @@ public:
 		
 	}
 
+
+
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Horde") // pour HUD
 	int32 GetEnemyCount() const
 	{
