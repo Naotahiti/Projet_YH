@@ -18,6 +18,7 @@ public:
         float    FallVelocity[CHUNK_SIZE];
         bool     OnGround[CHUNK_SIZE];
         FVector  GroundNormal[CHUNK_SIZE];
+        FVector WanderDir[CHUNK_SIZE]; // pr pas que les ia avancent trop linéairement
 
         float    HP[CHUNK_SIZE];
 
@@ -35,6 +36,8 @@ public:
 
         int32 SeqStart = 0;
 
+      
+
         void InitAt(int32 i, const FVector& Pos, int32 InISMIndex,
             float InAnimStart, float InAnimEnd, float InAnimRate,
             float InHP = 100.f)
@@ -45,9 +48,14 @@ public:
             FallVelocity[i] = 0.f;
             OnGround[i] = false;
             GroundNormal[i] = FVector::UpVector;
+            WanderDir[i] = FVector( // pr pas avancer droit
+                FMath::RandRange(-1.f, 1.f),
+                FMath::RandRange(-1.f, 1.f),
+                0.f).GetSafeNormal();
 
             HP[i] = InHP;
 
+            // useless but just in case
             AnimTime[i] = FMath::RandRange(InAnimStart, InAnimEnd);
             AnimStart[i] = InAnimStart;
             AnimEnd[i] = InAnimEnd;
@@ -69,7 +77,7 @@ public:
         TArray<FEntry>    Entries;
         TArray<FIntPoint> CellKeys;
         TArray<int32>     CellStarts;
-        float             CellSize = 500.f;
+        float             CellSize = 200.f;
 
         void Reserve(int32 MaxAgents)
         {
@@ -161,6 +169,13 @@ public:
 
     FSpatialGrid   Grid;
 
+    FVector Playerpos;
+
+    void upplayerpos(FVector v)
+    {
+        Playerpos = v;
+    }
+
     FVector Scale;
     float SepRadiusSq = 10000.f;
     float NeighborRadiusSq = 40000.f;
@@ -215,22 +230,25 @@ public:
                 {
                     C.DistSq[i] = FVector::DistSquared(C.Positions[i], PlayerPos);
                     C.LODLevel[i] =
-                        C.DistSq[i] < 300000.f ? 0 :
-                        C.DistSq[i] < 2000000.f ? 1 : 2;
+                        C.DistSq[i] < 3000000.f ? 0 : 1;
+                        //C.DistSq[i] < 2000000.f ? 1 : 2;
                 }
             });
     }
 
     void RunMovement(const AFlowField* FF, float Speed, float DeltaTime, TFunctionRef<float(const FVector&)> SampleHeight)
     {
-        if (!FF) return;
+        if (!FF) return; // si pas de flow field
 
-        const int32 Total = TotalEntities();
+        const float WanderAngle = FMath::RandRange(-0.1f, 0.1f);
+        
+
+        const int32 Total = TotalEntities(); // si plus d'ia
         if (Total == 0) return;
 
         {
             int32 Seq = 0;
-            for (int32 ci = 0; ci < Chunks.Num(); ci++)
+            for (int32 ci = 0; ci < Chunks.Num(); ci++) // pr pas se tromper d'index
             {
                 Chunks[ci].SeqStart = Seq;
                 Seq += Chunks[ci].Count;
@@ -246,14 +264,20 @@ public:
         TArray<FVector> NewVelocities;
         NewVelocities.SetNum(Total);
         //lecture
-        ParallelFor(Chunks.Num(), [&](int32 ci)
+        ParallelFor(Chunks.Num(), [&](int32 ci) // parcours les chunks...
             {
                 FChunk& C = Chunks[ci];
-                for (int32 i = 0; i < C.Count; i++)
+                for (int32 i = 0; i < C.Count; i++) // ...leurs ia
                 {
                     const int32 Seq = C.SeqStart + i;
 
-                    if (C.LODLevel[i] == 2)
+                    if (C.LODLevel[i] == 1) // si trop loin bouge pas
+                    {
+                        NewVelocities[Seq] = FVector::ZeroVector;
+                        continue;
+                    }
+                    const float distp = FVector::DistSquared(C.Positions[i], Playerpos);
+                    if( distp <= 25000) // ou si trop close du player
                     {
                         NewVelocities[Seq] = FVector::ZeroVector;
                         continue;
@@ -261,7 +285,7 @@ public:
 
                     const FVector FlowDir = FF->SampleFlow(C.Positions[i]);
                     FVector DesiredVel(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
-
+                   
                     if (C.LODLevel[i] == 0)
                     {
                         FVector Sep = FVector::ZeroVector;
@@ -271,11 +295,13 @@ public:
 
                         const FVector MyPos = C.Positions[i];
                         const int32 MySeqIdx = Seq;
+                       
+                        C.WanderDir[i] = C.WanderDir[i].RotateAngleAxis(WanderAngle, FVector::UpVector);
 
                         Grid.ForEachNeighbor(MyPos, [&](int32 NSeqIdx)
                             {
                                 if (NSeqIdx == MySeqIdx) return;
-                                int32 nci = 0, ni = NSeqIdx;
+                                int32 nci = 0, ni = NSeqIdx; // ia voisine
                                 for (; nci < Chunks.Num(); nci++)
                                 {
                                     if (ni < Chunks[nci].Count) break;
@@ -285,11 +311,15 @@ public:
 
                                 const FVector NPos = Chunks[nci].Positions[ni];
                                 const float DistSq = FVector::DistSquared(MyPos, NPos);
+                                
+                                const FVector MyForward = C.Rotations[i].GetForwardVector();
+                               // if (!IsInFieldOfView(MyPos, MyForward, NPos, 120.f))return;
 
-                                if (DistSq > 0.f && DistSq < SepRadiusSq)
+                                if (DistSq > 0.f && DistSq < SepRadiusSq && IsInFieldOfView(MyPos, MyForward, NPos, 200.f))
                                     Sep += (MyPos - NPos).GetSafeNormal();
+                                
 
-                                if (DistSq < NeighborRadiusSq)
+                                if (DistSq < NeighborRadiusSq && IsInFieldOfView(MyPos, MyForward, NPos, 200.f))
                                 {
                                     Ali += Chunks[nci].Velocities[ni];
                                     Coh += NPos;
@@ -310,15 +340,19 @@ public:
                         DesiredVel.Y += Steering.Y * Speed;*/
                         const FVector Steering = Sep * SepWeight + Ali * AliWeight + Coh * CohWeight;
                         const FVector FinalDir = (FlowDir.GetSafeNormal2D() + Steering).GetSafeNormal2D();
-                        DesiredVel.X = FinalDir.X * Speed;
-                        DesiredVel.Y = FinalDir.Y * Speed;
+                        DesiredVel.X = FinalDir.X *Speed;
+                        DesiredVel.Y = FinalDir.Y *Speed;
+                        //DesiredVel.X += C.WanderDir[i].X * Speed * 0.2f; // 20% de la vitesse max
+                        //DesiredVel.Y += C.WanderDir[i].Y * Speed * 0.2f;
+                       
                     }
 
                     const float VelSq = DesiredVel.SizeSquared2D();
                     if (VelSq > Speed * Speed * 4.f)
-                        DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 2.f;
-
+                        DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 1.f;
+                    
                     NewVelocities[Seq] = DesiredVel;
+                    
                 }
             });
 
@@ -348,7 +382,7 @@ public:
 
     }
 
-    
+ 
 
     void RunGravity(float DeltaTime,
         TFunctionRef<float(const FVector&)> SampleHeight)
@@ -380,7 +414,23 @@ public:
             }
     }
 
-   
+    bool IsInFieldOfView(const FVector& MyPosition, const FVector& MyForward, const FVector& OtherPosition, float FOVDegrees)
+    {
+        FVector DirectionToOther = OtherPosition - MyPosition;
+        DirectionToOther.Z = 0.f;
+
+        if (DirectionToOther.IsNearlyZero())
+            return false;
+
+        DirectionToOther.Normalize();
+
+        const float Dot = FVector::DotProduct(MyForward, DirectionToOther);
+
+        const float CosHalfFOV =
+            FMath::Cos(FMath::DegreesToRadians(FOVDegrees * 0.5f));
+
+        return Dot >= CosHalfFOV;
+    }
 
     //// avoid looping on UpdateInstanceTransform
     void RunRender(TArray<FTransform>& Batch, UInstancedStaticMeshComponent* ISM)

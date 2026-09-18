@@ -51,7 +51,7 @@ void ASpawner::BeginPlay()
 
 	}
 	HC.Origin = GetActorLocation() - FVector(5000.f, 5000.f, 0.f);
-	HC.CellSize = 200.f;
+	HC.CellSize = 300.f;
 	HC.SizeX = 50;
 	HC.SizeY = 50;
 	HC.Bake(GetWorld(), HC.Origin);
@@ -82,7 +82,7 @@ void ASpawner::Tick(float DeltaTime)
 	FrameCounter++;
 	const FVector PlayerPos = Player->GetActorLocation();
 
-	
+	AI.upplayerpos(PlayerPos);
 	AI.RunLOD(PlayerPos); // 2 LOD so far , might be removed cause not needed so far
 	
 	AI.RunMovement(FF, Speed, DeltaTime, [this](const FVector& Pos)
