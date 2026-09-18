@@ -196,6 +196,21 @@ void AFlowField::BakeObstacles()
         for (int32 X = 0; X < GridSizeX; ++X)
             bBlockedBaked[GetCellIndex(X, Y)] = IsCellBlocked(X, Y);
 }
+// pr obstacle avoidance
+bool AFlowField::IsCellBlockedAtWorld(const FVector& WorldPos) const
+{
+    if (Cells.Blocked.Num() == 0) return false;
+    int32 X, Y;
+    WorldToCell(WorldPos, X, Y);
+    return Cells.Blocked[GetCellIndex(X, Y)];
+}
+float AFlowField::SampleCostAtWorld(const FVector& WorldPos) const
+{
+    if (Cells.Costs.Num() == 0) return TNumericLimits<float>::Max();
+    int32 X, Y;
+    WorldToCell(WorldPos, X, Y);
+    return Cells.Costs[GetCellIndex(X, Y)];
+}
 
 // ─────────────────────────────────────────────
 bool AFlowField::IsCellBlocked(int32 X, int32 Y) const

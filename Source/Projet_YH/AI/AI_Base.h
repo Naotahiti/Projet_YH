@@ -276,20 +276,13 @@ public:
                         NewVelocities[Seq] = FVector::ZeroVector;
                         continue;
                     }
-                    //const float distp = FVector::DistSquared(C.Positions[i], Playerpos);
-                    //if( distp <= 25000) // ou si trop close du player
-                    //{
-                    //    NewVelocities[Seq] = FVector::ZeroVector;
-                    //    continue;
-                    //}
+              
 
-                    const FVector FlowDir = FF->SampleFlow(C.Positions[i]);
+                    const FVector FlowDir = FF->SampleFlow(C.Positions[i]); // si proche du j  stop else ff
                     FVector DesiredVel = C.DistSq[i] < 200.*200.
                         ? FVector::ZeroVector
                         : FVector(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
-
-                    //FVector DesiredVel(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
-                   
+  
                     if (C.LODLevel[i] == 0)
                     {
                         FVector Sep = FVector::ZeroVector;
@@ -314,17 +307,15 @@ public:
                                 if (!Chunks.IsValidIndex(nci)) return;
 
                                 const FVector NPos = Chunks[nci].Positions[ni];
+                                const FVector NVel = Chunks[nci].Velocities[ni];
                                 const float DistSq = FVector::DistSquared(MyPos, NPos);
                                 
                                 const FVector MyForward = C.Rotations[i].GetForwardVector();
                                // if (!IsInFieldOfView(MyPos, MyForward, NPos, 120.f))return;
 
-                                if (DistSq > 0.f && DistSq < SepRadiusSq && IsInFieldOfView(MyPos, MyForward, NPos, 200.f))
-                                    Sep += (MyPos - NPos).GetSafeNormal();
-                                
-
-                                if (DistSq < NeighborRadiusSq && IsInFieldOfView(MyPos, MyForward, NPos, 200.f))
+                                if (DistSq > 0.f && DistSq < SepRadiusSq && IsInFieldOfView(MyPos, MyForward, NPos, 120.f))//&&!NVel.IsNearlyZero())                             
                                 {
+                                    Sep += (MyPos - NPos).GetSafeNormal();
                                     Ali += Chunks[nci].Velocities[ni];
                                     Coh += NPos;
                                     Count++;
@@ -335,16 +326,11 @@ public:
                         {
                             Ali = (Ali / Count).GetSafeNormal();
                             Coh = ((Coh / Count) - MyPos).GetSafeNormal();
-                        }
-
-                      /*  const FVector Steering = Sep * SepWeight
-                            + Ali * AliWeight
-                            + Coh * CohWeight;
-                        DesiredVel.X += Steering.X * Speed;
-                        DesiredVel.Y += Steering.Y * Speed;*/
+                        }        
                         const FVector Steering = Sep * SepWeight + Ali * AliWeight + Coh * CohWeight;
-                        //const FVector FinalDir = (FlowDir.GetSafeNormal2D() + Steering).GetSafeNormal2D();
+                       
                         if (DesiredVel.IsNearlyZero())
+
                         {
                             // IAs stp : seulement la sparation s'applique
                             // Elles reculent si trop compresses
@@ -361,7 +347,6 @@ public:
                         //DesiredVel.Y += C.WanderDir[i].Y * Speed * 0.2f;
                        
                     }
-
                     const float VelSq = DesiredVel.SizeSquared2D();
                     if (VelSq > Speed * Speed * 4.f) // limite vitesse sinon accumulation sur plusieurs frames
                         DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 2.f;
@@ -371,31 +356,97 @@ public:
                 }
             });
 
-        // application
-        for (int32 ci = 0; ci < Chunks.Num(); ci++)
-        {
-            FChunk& C = Chunks[ci];
-            for (int32 i = 0; i < C.Count; i++)
+        //// application
+        //for (int32 ci = 0; ci < Chunks.Num(); ci++)
+        //{
+        //    FChunk& C = Chunks[ci];
+        //    for (int32 i = 0; i < C.Count; i++)
+        //    {
+        //        const FVector& Vel = NewVelocities[C.SeqStart + i];
+        //        C.Velocities[i] = Vel;
+        //        C.Positions[i] += Vel * DeltaTime;
+        //        C.Positions[i].Z = SampleHeight(C.Positions[i]) + 2.f;
+
+        //        const FVector Dir2D(Vel.X, Vel.Y, 0.f);
+        //        if (!Dir2D.IsNearlyZero())
+        //            //C.Rotations[i] = Dir2D.ToOrientationQuat();
+        //        {
+        //            FQuat BaseRot = Dir2D.ToOrientationQuat();
+        //            FQuat Offset = FQuat(FVector::UpVector, FMath::DegreesToRadians(-90.f)); // fix décalage sur la gauche
+        //            BaseRot = BaseRot * Offset;
+
+        //            C.Rotations[i] = FQuat::Slerp(C.Rotations[i], BaseRot, DeltaTime * 10.f);
+        //        }
+        //    }
+        //}
+            for (int32 ci = 0; ci < Chunks.Num(); ci++)
             {
-                const FVector& Vel = NewVelocities[C.SeqStart + i];
-                C.Velocities[i] = Vel;
-                C.Positions[i] += Vel * DeltaTime;
-                C.Positions[i].Z = SampleHeight(C.Positions[i]) + 2.f;
-
-                const FVector Dir2D(Vel.X, Vel.Y, 0.f);
-                if (!Dir2D.IsNearlyZero())
-                    //C.Rotations[i] = Dir2D.ToOrientationQuat();
+                FChunk& C = Chunks[ci];
+                for (int32 i = 0; i < C.Count; i++)
                 {
-                    FQuat BaseRot = Dir2D.ToOrientationQuat();
-                    FQuat Offset = FQuat(FVector::UpVector, FMath::DegreesToRadians(-90.f)); // fix décalage sur la gauche
-                    BaseRot = BaseRot * Offset;
+                    FVector Vel = NewVelocities[C.SeqStart + i];
 
-                    C.Rotations[i] = FQuat::Slerp(C.Rotations[i], BaseRot, DeltaTime * 10.f);
+                    if (C.LODLevel[i] == 0 && !Vel.IsNearlyZero())
+                    {
+                        const FVector NextPos = C.Positions[i] + Vel.GetSafeNormal2D() * 200.f;
+
+                        if (FF->IsCellBlockedAtWorld(NextPos))
+                        {
+                            
+                            static const FVector Dirs[4] = {
+                                FVector(1,0,0), FVector(-1,0,0),
+                                FVector(0,1,0), FVector(0,-1,0)
+                            };
+
+                            FVector BestDir = FVector::ZeroVector;
+                            float   BestCost = TNumericLimits<float>::Max();
+
+                            for (const FVector& Dir : Dirs)
+                            {
+                                const FVector TestPos = C.Positions[i] + Dir * 200.f;
+                                if (!FF->IsCellBlockedAtWorld(TestPos))
+                                {
+                                    const float Cost = FF->SampleCostAtWorld(TestPos);
+                                    if (Cost < BestCost)
+                                    {
+                                        BestCost = Cost;
+                                        BestDir = Dir;
+                                    }
+                                }
+                            }
+
+                            if (!BestDir.IsNearlyZero())
+                            {
+                                //  meilleure direction libre
+                                const float CurrentSpeed = Vel.Size2D();
+                                Vel.X = BestDir.X * CurrentSpeed;
+                                Vel.Y = BestDir.Y * CurrentSpeed;
+                            }
+                            else
+                            {
+                                
+                                Vel = FVector::ZeroVector;
+                            }
+                        }
+                    }
+                   
+
+                    C.Velocities[i] = Vel;
+                    C.Positions[i] += Vel * DeltaTime;
+                    C.Positions[i].Z = SampleHeight(C.Positions[i]) + 2.f;
+
+                    const FVector Dir2D(Vel.X, Vel.Y, 0.f);
+                    if (!Dir2D.IsNearlyZero())
+                    {
+                        FQuat BaseRot = Dir2D.ToOrientationQuat();
+                        FQuat Offset = FQuat(FVector::UpVector, FMath::DegreesToRadians(-90.f));
+                        C.Rotations[i] = FQuat::Slerp(C.Rotations[i], BaseRot * Offset, DeltaTime * 10.f);
+                    }
                 }
             }
-        }
-
     }
+
+    
 
  
 

@@ -49,6 +49,8 @@ public:
 
     // ── API publique (appelée depuis Spawner, thread-safe en lecture) ──
     FVector SampleFlow(const FVector& WorldPosition) const;
+    bool    IsCellBlockedAtWorld(const FVector& WorldPos) const;
+    float   SampleCostAtWorld(const FVector& WorldPos) const;
 
 protected:
     virtual void BeginPlay()  override;
@@ -93,5 +95,11 @@ private:
         return GetActorLocation()
             + FVector(X * CellSize + CellSize * 0.5f,
                 Y * CellSize + CellSize * 0.5f, 0.f);
+    }
+    FORCEINLINE void WorldToCell(const FVector& WorldPos, int32& OutX, int32& OutY) const
+    {
+        const FVector Local = WorldPos - GetActorLocation();
+        OutX = FMath::Clamp(FMath::FloorToInt(Local.X / CellSize), 0, GridSizeX - 1);
+        OutY = FMath::Clamp(FMath::FloorToInt(Local.Y / CellSize), 0, GridSizeY - 1);
     }
 };
