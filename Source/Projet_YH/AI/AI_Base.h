@@ -276,15 +276,19 @@ public:
                         NewVelocities[Seq] = FVector::ZeroVector;
                         continue;
                     }
-                    const float distp = FVector::DistSquared(C.Positions[i], Playerpos);
-                    if( distp <= 25000) // ou si trop close du player
-                    {
-                        NewVelocities[Seq] = FVector::ZeroVector;
-                        continue;
-                    }
+                    //const float distp = FVector::DistSquared(C.Positions[i], Playerpos);
+                    //if( distp <= 25000) // ou si trop close du player
+                    //{
+                    //    NewVelocities[Seq] = FVector::ZeroVector;
+                    //    continue;
+                    //}
 
                     const FVector FlowDir = FF->SampleFlow(C.Positions[i]);
-                    FVector DesiredVel(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
+                    FVector DesiredVel = C.DistSq[i] < 200.*200.
+                        ? FVector::ZeroVector
+                        : FVector(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
+
+                    //FVector DesiredVel(FlowDir.X * Speed, FlowDir.Y * Speed, 0.f);
                    
                     if (C.LODLevel[i] == 0)
                     {
@@ -339,17 +343,28 @@ public:
                         DesiredVel.X += Steering.X * Speed;
                         DesiredVel.Y += Steering.Y * Speed;*/
                         const FVector Steering = Sep * SepWeight + Ali * AliWeight + Coh * CohWeight;
-                        const FVector FinalDir = (FlowDir.GetSafeNormal2D() + Steering).GetSafeNormal2D();
-                        DesiredVel.X = FinalDir.X *Speed;
-                        DesiredVel.Y = FinalDir.Y *Speed;
+                        //const FVector FinalDir = (FlowDir.GetSafeNormal2D() + Steering).GetSafeNormal2D();
+                        if (DesiredVel.IsNearlyZero())
+                        {
+                            // IAs stp : seulement la sparation s'applique
+                            // Elles reculent si trop compresses
+                            DesiredVel.X = Steering.X * Speed * 0.5f;
+                            DesiredVel.Y = Steering.Y * Speed * 0.5f;
+                        }
+                        else
+                        {
+                            // IAs en mouvement : flow field + steering
+                            DesiredVel.X += Steering.X * Speed;
+                            DesiredVel.Y += Steering.Y * Speed;
+                        }
                         //DesiredVel.X += C.WanderDir[i].X * Speed * 0.2f; // 20% de la vitesse max
                         //DesiredVel.Y += C.WanderDir[i].Y * Speed * 0.2f;
                        
                     }
 
                     const float VelSq = DesiredVel.SizeSquared2D();
-                    if (VelSq > Speed * Speed * 4.f)
-                        DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 1.f;
+                    if (VelSq > Speed * Speed * 4.f) // limite vitesse sinon accumulation sur plusieurs frames
+                        DesiredVel = DesiredVel.GetSafeNormal2D() * Speed * 2.f;
                     
                     NewVelocities[Seq] = DesiredVel;
                     
@@ -414,7 +429,7 @@ public:
             }
     }
 
-    bool IsInFieldOfView(const FVector& MyPosition, const FVector& MyForward, const FVector& OtherPosition, float FOVDegrees)
+    bool IsInFieldOfView(const FVector& MyPosition, const FVector& MyForward, const FVector& OtherPosition, float FOVDegrees)const //Le ParallelFor ne peut pas appeler une methode non-const depuis un lambda
     {
         FVector DirectionToOther = OtherPosition - MyPosition;
         DirectionToOther.Z = 0.f;
